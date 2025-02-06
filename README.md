@@ -55,3 +55,15 @@ To start, download the dataset from [Kaggle](https://www.kaggle.com/adityajn105/
     - (image files)
   - captions.txt
 
+## Setup Instructions
+
+Ensure you have Python 3.10.12 installed, available via [Python's official website](https://www.python.org/downloads/). Upgrade older versions using pip, included with Python installations after Python 2.7.9 and Python 3.4.
+
+To set up the project environment:
+
+```plaintext
+git clone https://github.com/Sajid030/image-caption-generator.git
+cd image-caption-generator
+pip install -r requirements.txt
+```
+
