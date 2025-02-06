@@ -82,3 +82,18 @@ Steps for deploying on Streamlit Sharing:
    ```
 4. Deploy the app by clicking "Deploy app."
 
+## Project Structure
+
+```plaintext
+|   app.py
+|   image-captioner.ipynb
+|   LICENSE.md
+|   mymodel.h5
+|   README.md
+|   requirements.txt
+|   tokenizer.pkl
+|---resource
+    |   demo.gif
+    |   red-ribbon
+```
+
