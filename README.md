@@ -19,3 +19,14 @@
 - [Issue Reporting](#issue-reporting)
 - [Development Roadmap](#development-roadmap)
 
+## Demo
+
+- Access the app here: [Image Caption Generator](https://imgcaptiongen.streamlit.app/)
+
+`Note:` If the above link is inactive, it may indicate a temporary shutdown or technical difficulties. We apologize for any inconvenience this may cause.
+
+- If you appreciate the tool, please consider starring the repository.
+- Here’s a glimpse of what the **Image Caption Generator** app looks like:
+
+![Caption Generator Demo](resource/demo.gif)
+
