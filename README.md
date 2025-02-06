@@ -67,3 +67,18 @@ cd image-caption-generator
 pip install -r requirements.txt
 ```
 
+## Streamlit Deployment
+
+Steps for deploying on Streamlit Sharing:
+
+1. Register for Streamlit Sharing and fork this repository.
+2. Link your GitHub to Streamlit and select the forked repository.
+3. In the Streamlit dashboard, configure as follows:
+   ```
+   [server]
+   headless = true
+   port = $PORT
+   enableCORS = false
+   ```
+4. Deploy the app by clicking "Deploy app."
+
