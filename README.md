@@ -97,3 +97,7 @@ Steps for deploying on Streamlit Sharing:
     |   red-ribbon
 ```
 
+## Issue Reporting
+
+Encountered a bug or have a feature suggestion? Please open an issue on the [GitHub page](https://github.com/pr0ximaCent/Imaco-Image_Caption-Generator/issues) with a detailed description and expected outcome. Your input helps enhance the app’s functionality.
+
