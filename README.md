@@ -30,3 +30,28 @@
 
 ![Caption Generator Demo](resource/demo.gif)
 
+## Overview
+
+This repository hosts the codebase for an advanced image captioning system utilizing deep learning. The core of this system uses the VGG16 model for robust feature extraction combined with a LSTM-based model to generate meaningful captions. The captioning system is trained on the Flickr8k dataset, enriched with an attention mechanism for enhanced caption precision.
+
+**Important Note:** Although VGG16 is effective, its high memory demand may be problematic in constrained environments. Alternatively, MobileNetV2 offers a good balance between efficiency and accuracy, and is used in the deployed version of the app for its lower memory footprint.
+
+Key components include:
+
+- Feature extraction with VGG16 (MobileNetV2 recommended for efficiency)
+- Caption preprocessing and tokenization
+- An LSTM model with attention for dynamic captioning
+- Comprehensive training and validation
+- A Streamlit-based interface for real-time caption generation
+
+## Dataset Details
+
+The system uses the [Flickr8k dataset](https://www.kaggle.com/adityajn105/flickr8k), a well-curated collection of over 8,000 images each annotated with five distinct captions. This dataset is ideal for training due to its variety and rich annotations.
+
+To start, download the dataset from [Kaggle](https://www.kaggle.com/adityajn105/flickr8k) and organize it as follows:
+
+- flickr8k
+  - Images
+    - (image files)
+  - captions.txt
+
