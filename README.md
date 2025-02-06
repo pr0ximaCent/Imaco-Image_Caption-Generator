@@ -101,3 +101,12 @@ Steps for deploying on Streamlit Sharing:
 
 Encountered a bug or have a feature suggestion? Please open an issue on the [GitHub page](https://github.com/pr0ximaCent/Imaco-Image_Caption-Generator/issues) with a detailed description and expected outcome. Your input helps enhance the app’s functionality.
 
+## Development Roadmap
+
+Future enhancements include:
+
+1. **Model Optimization**: Refining model architecture and hyperparameters for optimal results.
+2. **Dataset Enrichment**: Expanding training data using the [Flickr30k dataset](https://www.kaggle.com/datasets/hsankesara/flickr-image-dataset) to enhance model robustness.
+3. **Advanced Decoding**: Integrating beam search techniques for better caption choices.
+4. **UI Improvements**: Upgrading the Streamlit interface with features like image previews and confidence scores.
+5. **Multilingual Support**: Adapting the model for captions in various languages using multilingual datasets.
