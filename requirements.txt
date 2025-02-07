@@ -1,12 +1,11 @@
-streamlit
-tensorflow>=2.16.0
-setuptools>=68.0.0
-numpy
-pandas
-scikit-learn
-matplotlib
-scipy
-requests
-Pillow
-python-dotenv  # If you're using environment variables
-gunicorn  # For deployment on Streamlit (or any other WSGI server)
+streamlit==1.17.0
+tensorflow==2.11.0
+numpy==1.24.0
+pillow==9.4.0
+matplotlib==3.7.0
+nltk==3.7
+flask==2.2.2
+scikit-learn==1.0.2
+pandas==1.5.3
+h5py==3.6.0
+pickle5==0.0.11
