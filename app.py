@@ -1,85 +1,114 @@
 import streamlit as st
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
 import numpy as np
 import pickle
-import tensorflow as tf
-from tensorflow.keras.models import Model
-from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+from PIL import Image
+import io
 
-# Load MobileNetV2 model
-mobilenet_model = MobileNetV2(weights="imagenet")
-mobilenet_model = Model(inputs=mobilenet_model.inputs, outputs=mobilenet_model.layers[-2].output)
+# Load the pre-trained model and required files
+@st.cache_resource
+def load_caption_model():
+    return load_model('caption_model.h5')
 
-# Load your trained model
-model = tf.keras.models.load_model('mymodel.h5')
+@st.cache_resource
+def load_vgg_model():
+    model = VGG16()
+    # Remove the last layer (output layer)
+    return tf.keras.Model(inputs=model.inputs, outputs=model.layers[-2].output)
 
-# Load the tokenizer
-with open('tokenizer.pkl', 'rb') as tokenizer_file:
-    tokenizer = pickle.load(tokenizer_file)
+@st.cache_resource
+def load_tokenizer():
+    with open('tokenizer.pkl', 'rb') as f:
+        return pickle.load(f)
+
+def extract_features(image, vgg_model):
+    # Resize image to 224x224
+    image = image.resize((224, 224))
+    # Convert PIL image to numpy array
+    image = img_to_array(image)
+    # Reshape for VGG
+    image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
+    # Preprocess image for VGG
+    image = preprocess_input(image)
+    # Extract features
+    features = vgg_model.predict(image, verbose=0)
+    return features
+
+def generate_caption(image, caption_model, vgg_model, tokenizer, max_length=34):
+    # Extract features from the image
+    features = extract_features(image, vgg_model)
     
-# Set custom web page title
-st.set_page_config(page_title="Caption Generator App", page_icon="📷")
-
-# Streamlit app
-st.title("Image Caption Generator")
-st.markdown(
-    "Upload an image, and this app will generate a caption for it using a trained LSTM model."
-)
-
-# Upload image
-uploaded_image = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
-
-# Process uploaded image
-if uploaded_image is not None:
-    st.subheader("Uploaded Image")
-    st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
-
-    st.subheader("Generated Caption")
-    # Display loading spinner while processing
-    with st.spinner("Generating caption..."):
-        # Load image
-        image = load_img(uploaded_image, target_size=(224, 224))
-        image = img_to_array(image)
-        image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
-        image = preprocess_input(image)
-
-        # Extract features using VGG16
-        image_features = mobilenet_model.predict(image, verbose=0)
-
-        # Max caption length
-        max_caption_length = 34
+    # Initialize caption generation
+    in_text = 'startseq'
+    
+    # Generate caption word by word
+    for _ in range(max_length):
+        # Encode the current input text
+        sequence = tokenizer.texts_to_sequences([in_text])[0]
+        # Pad the sequence
+        sequence = tf.keras.preprocessing.sequence.pad_sequences([sequence], maxlen=max_length)
         
-        # Define function to get word from index
-        def get_word_from_index(index, tokenizer):
-            return next(
-                (word for word, idx in tokenizer.word_index.items() if idx == index), None
-        )
+        # Predict next word
+        yhat = caption_model.predict([features, sequence], verbose=0)
+        # Get index with highest probability
+        yhat = np.argmax(yhat)
+        # Convert index to word
+        word = None
+        for word, index in tokenizer.word_index.items():
+            if index == yhat:
+                break
+        
+        # Stop if word not found
+        if word is None:
+            break
+            
+        # Append word to caption
+        in_text += ' ' + word
+        
+        # Stop if end sequence found
+        if word == 'endseq':
+            break
+    
+    # Remove start and end tokens
+    final_caption = in_text.replace('startseq', '').replace('endseq', '').strip()
+    return final_caption
 
-        # Generate caption using the model
-        def predict_caption(model, image_features, tokenizer, max_caption_length):
-            caption = "startseq"
-            for _ in range(max_caption_length):
-                sequence = tokenizer.texts_to_sequences([caption])[0]
-                sequence = pad_sequences([sequence], maxlen=max_caption_length)
-                yhat = model.predict([image_features, sequence], verbose=0)
-                predicted_index = np.argmax(yhat)
-                predicted_word = get_word_from_index(predicted_index, tokenizer)
-                caption += " " + predicted_word
-                if predicted_word is None or predicted_word == "endseq":
-                    break
-            return caption
+# Streamlit UI
+def main():
+    st.title('Image Caption Generator')
+    st.write('Upload an image and get its caption!')
+    
+    # Load models
+    try:
+        caption_model = load_caption_model()
+        vgg_model = load_vgg_model()
+        tokenizer = load_tokenizer()
+        
+        # File uploader
+        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+        
+        if uploaded_file is not None:
+            # Display the uploaded image
+            image = Image.open(uploaded_file)
+            st.image(image, caption='Uploaded Image', use_column_width=True)
+            
+            # Generate caption button
+            if st.button('Generate Caption'):
+                with st.spinner('Generating caption...'):
+                    # Generate caption
+                    caption = generate_caption(image, caption_model, vgg_model, tokenizer)
+                    
+                    # Display caption
+                    st.success('Caption generated successfully!')
+                    st.write('**Generated Caption:**')
+                    st.write(caption)
+    
+    except Exception as e:
+        st.error(f"Error loading models: {str(e)}")
+        st.write("Please make sure all required model files are in the correct location.")
 
-        # Generate caption
-        generated_caption = predict_caption(model, image_features, tokenizer, max_caption_length)
-
-        # Remove startseq and endseq
-        generated_caption = generated_caption.replace("startseq", "").replace("endseq", "")
-
-    # Display the generated caption with custom styling
-    st.markdown(
-        f'<div style="border-left: 6px solid #ccc; padding: 5px 20px; margin-top: 20px;">'
-        f'<p style="font-style: italic;">“{generated_caption}”</p>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
+if __name__ == '__main__':
+    main()
