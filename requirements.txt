@@ -6,7 +6,7 @@ h5py==3.9.0
 scikit-learn>=1.2.0
 
 # Web framework and UI
-streamlit
+streamlit==1.25.0
 altair>=5.1.0
 watchdog>=3.0.0
 
@@ -19,11 +19,7 @@ matplotlib>=3.7.2
 pandas>=2.0.3
 protobuf>=4.24.2
 
-# Let Streamlit manage these UI packages
-rich
-markdown-it-py
-Pygments
-mdurl
+# (Removed: rich, markdown-it-py, Pygments, mdurl)
 
 # NLP and Utils
 nltk>=3.8.1
