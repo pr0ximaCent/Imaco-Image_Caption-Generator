@@ -19,8 +19,6 @@ matplotlib>=3.7.2
 pandas>=2.0.3
 protobuf>=4.24.2
 
-# (Removed: rich, markdown-it-py, Pygments, mdurl)
-
 # NLP and Utils
 nltk>=3.8.1
 tqdm>=4.66.1
@@ -51,3 +49,6 @@ charset-normalizer>=3.2.0
 # Additional TensorFlow dependencies
 termcolor>=2.3.0
 Werkzeug>=2.3.7
+
+# Other dependencies related to your app's functionality
+gdown>=4.7.1
