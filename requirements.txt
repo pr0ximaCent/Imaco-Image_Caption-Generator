@@ -1,7 +1,6 @@
 # Core ML and deep learning
 tensorflow==2.15.0
 numpy==1.23.5
-scipy==1.11.2
 h5py==3.9.0
 scikit-learn>=1.2.0
 
@@ -16,28 +15,7 @@ Pillow==9.5.0
 
 # Data processing and visualization
 matplotlib>=3.7.2
-pandas>=2.0.3
 protobuf>=4.24.2
-
-# NLP and Utils
-nltk>=3.8.1
-tqdm>=4.66.1
-six>=1.16.0
-packaging>=23.1
-typing_extensions>=4.5.0
-
-# TensorFlow and related dependencies
-tensorboard>=2.15.2
-tensorflow-estimator>=2.15.0
-tensorflow-io-gcs-filesystem>=0.31.0
-opt-einsum>=3.3.0
-grpcio>=1.57.0
-absl-py>=1.4.0
-astunparse>=1.6.3
-flatbuffers>=23.5.26
-gast>=0.4.0
-google-pasta>=0.2.0
-wrapt>=1.14.1
 
 # HTTP and authentication
 requests>=2.31.0
@@ -49,6 +27,3 @@ charset-normalizer>=3.2.0
 # Additional TensorFlow dependencies
 termcolor>=2.3.0
 Werkzeug>=2.3.7
-
-# Other dependencies related to your app's functionality
-gdown>=4.7.1
