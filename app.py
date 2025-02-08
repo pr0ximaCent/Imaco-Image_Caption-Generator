@@ -67,11 +67,10 @@ def load_models():
                 
                 # Create model with correct architecture
                 model = create_caption_model(vocab_size, max_length)
-                
-                # Compile the model
-                optimizer = keras.optimizers.legacy.Adam()
+                # Compile the model using the standard optimizer
+                optimizer = keras.optimizers.Adam()
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-                
+
                 # Load weights
                 model.load_weights('caption_model.h5')
                 st.session_state.caption_model = model
