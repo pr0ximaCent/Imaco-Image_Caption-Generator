@@ -1,29 +1,11 @@
-# Core ML and deep learning
-tensorflow==2.15.0
-numpy==1.23.5
-h5py==3.9.0
-scikit-learn>=1.2.0
-
-# Web framework and UI
-streamlit==1.25.0
-altair>=5.1.0
-watchdog>=3.0.0
-
-# File downloading and processing
-gdown>=4.7.1
+tensorflow==2.14.0
+nltk==3.8.1
+numpy==1.23.4
+matplotlib==3.7.1
 Pillow==9.5.0
-
-# Data processing and visualization
-matplotlib>=3.7.2
-protobuf>=4.24.2
-
-# HTTP and authentication
-requests>=2.31.0
-urllib3<2.0.0
-certifi>=2023.7.22
-idna>=3.4
-charset-normalizer>=3.2.0
-
-# Additional TensorFlow dependencies
-termcolor>=2.3.0
-Werkzeug>=2.3.7
+tqdm==4.65.0
+scipy==1.9.3
+h5py==3.8.0
+keras==2.14.0
+streamlit==1.24.0    # Add Streamlit for the app UI
+gdown==4.7.0         # Add gdown for downloading models from Google Drive
