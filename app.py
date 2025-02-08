@@ -1,15 +1,17 @@
 import streamlit as st
 import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
+                                   concatenate, Bidirectional, Dot, Activation, 
+                                   RepeatVector, Multiply, Lambda)
 import numpy as np
 import pickle
 from PIL import Image
-import io
 import time
 
-# Configure Tensorflow to use GPU memory growth to avoid memory issues
+# Configure Tensorflow GPU memory growth
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -18,36 +20,64 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-# Cache the models and tokenizer in session state
+def create_caption_model(vocab_size, max_length):
+    """Recreate the caption model architecture"""
+    
+    # Features from the CNN
+    inputs1 = Input(shape=(4096,))
+    fe1 = Dropout(0.5)(inputs1)
+    fe2 = Dense(256, activation='relu')(fe1)
+    
+    # Sequence model
+    inputs2 = Input(shape=(max_length,))
+    se1 = Embedding(vocab_size, 256, mask_zero=True)(inputs2)
+    se2 = Dropout(0.5)(se1)
+    se3 = LSTM(256)(se2)
+    
+    # Decoder
+    decoder1 = concatenate([fe2, se3])
+    decoder2 = Dense(256, activation='relu')(decoder1)
+    outputs = Dense(vocab_size, activation='softmax')(decoder2)
+    
+    # Create the model
+    model = Model(inputs=[inputs1, inputs2], outputs=outputs)
+    return model
+
+# Cache models and tokenizer in session state
 if 'models_loaded' not in st.session_state:
     st.session_state.models_loaded = False
 
 def load_models():
     if not st.session_state.models_loaded:
         with st.spinner('Loading models... (this will only happen once)'):
-            # Load caption model
-            st.session_state.caption_model = load_model('caption_model.h5', compile=False)
-            
-            # Load and configure VGG16
-            base_model = VGG16()
-            st.session_state.vgg_model = tf.keras.Model(inputs=base_model.inputs, 
-                                                       outputs=base_model.layers[-2].output)
-            
-            # Load tokenizer
-            with open('tokenizer.pkl', 'rb') as f:
-                st.session_state.tokenizer = pickle.load(f)
-            
-            st.session_state.models_loaded = True
-            
-            # Warmup the models with a dummy prediction
-            dummy_image = np.zeros((1, 224, 224, 3))
-            _ = st.session_state.vgg_model.predict(dummy_image, verbose=0)
-            
-@st.cache_data
-def extract_features(image_array):
-    """Cache feature extraction for identical images"""
-    features = st.session_state.vgg_model.predict(image_array, verbose=0)
-    return features
+            try:
+                # Load tokenizer first to get vocab_size
+                with open('tokenizer.pkl', 'rb') as f:
+                    st.session_state.tokenizer = pickle.load(f)
+                
+                # Get vocabulary size
+                vocab_size = len(st.session_state.tokenizer.word_index) + 1
+                max_length = 34  # Set this to the same value used during training
+                
+                # Create model with correct architecture
+                st.session_state.caption_model = create_caption_model(vocab_size, max_length)
+                
+                # Load weights
+                st.session_state.caption_model.load_weights('caption_model.h5')
+                
+                # Load and configure VGG16
+                base_model = VGG16()
+                st.session_state.vgg_model = Model(inputs=base_model.inputs, 
+                                                 outputs=base_model.layers[-2].output)
+                
+                st.session_state.models_loaded = True
+                
+                # Warmup models
+                dummy_image = np.zeros((1, 224, 224, 3))
+                _ = st.session_state.vgg_model.predict(dummy_image, verbose=0)
+                
+            except Exception as e:
+                raise Exception(f"Error loading models: {str(e)}")
 
 def process_image(image):
     # Resize image to 224x224
@@ -60,11 +90,15 @@ def process_image(image):
     image = preprocess_input(image)
     return image
 
+def extract_features(image_array):
+    features = st.session_state.vgg_model.predict(image_array, verbose=0)
+    return features
+
 def generate_caption(image, max_length=34):
     # Process image
     processed_image = process_image(image)
     
-    # Extract features with progress bar
+    # Extract features
     with st.spinner('Extracting image features...'):
         features = extract_features(processed_image)
     
@@ -72,7 +106,6 @@ def generate_caption(image, max_length=34):
     in_text = 'startseq'
     
     with st.spinner('Generating caption...'):
-        # Create a progress bar
         progress_bar = st.progress(0)
         
         # Generate caption word by word
@@ -81,9 +114,9 @@ def generate_caption(image, max_length=34):
             progress = (i + 1) / max_length
             progress_bar.progress(progress)
             
-            # Encode the current input text
+            # Encode current input text
             sequence = st.session_state.tokenizer.texts_to_sequences([in_text])[0]
-            # Pad the sequence
+            # Pad sequence
             sequence = tf.keras.preprocessing.sequence.pad_sequences([sequence], maxlen=max_length)
             
             # Predict next word
@@ -97,21 +130,15 @@ def generate_caption(image, max_length=34):
                 if index == yhat:
                     break
             
-            # Stop if word not found
             if word is None:
                 break
                 
-            # Append word to caption
             in_text += ' ' + word
             
-            # Stop if end sequence found
             if word == 'endseq':
                 break
     
-    # Remove progress bar after completion
     progress_bar.empty()
-    
-    # Remove start and end tokens
     final_caption = in_text.replace('startseq', '').replace('endseq', '').strip()
     return final_caption
 
@@ -119,30 +146,21 @@ def main():
     st.title('Image Caption Generator')
     st.write('Upload an image and get its caption!')
     
-    # Load models at startup
     try:
         load_models()
         
-        # File uploader
         uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
         
         if uploaded_file is not None:
-            # Display the uploaded image
             image = Image.open(uploaded_file)
             st.image(image, caption='Uploaded Image', use_column_width=True)
             
-            # Generate caption button
             if st.button('Generate Caption'):
                 try:
                     start_time = time.time()
-                    
-                    # Generate caption
                     caption = generate_caption(image)
-                    
-                    # Calculate processing time
                     processing_time = time.time() - start_time
                     
-                    # Display results
                     st.success(f'Caption generated in {processing_time:.2f} seconds!')
                     st.write('**Generated Caption:**')
                     st.write(caption)
