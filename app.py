@@ -1,10 +1,11 @@
 import streamlit as st
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import img_to_array
-from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
-                                   concatenate)
+import keras
+from keras.preprocessing.image import img_to_array
+from keras.applications.vgg16 import VGG16, preprocess_input
+from keras.models import Model
+from keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
+                         concatenate)
 import numpy as np
 import pickle
 from PIL import Image
@@ -59,8 +60,16 @@ def load_models():
                 # Compile the model (important for loading weights)
                 model.compile(loss='categorical_crossentropy', optimizer='adam')
                 
-                # Load weights
-                model.load_weights('caption_model.h5')
+                try:
+                    # Try loading weights directly
+                    model.load_weights('caption_model.h5')
+                except Exception as weight_error:
+                    # If direct loading fails, try loading as a saved model
+                    try:
+                        model = tf.keras.models.load_model('caption_model.h5')
+                    except Exception as model_error:
+                        raise Exception(f"Failed to load model: {str(model_error)}")
+                
                 st.session_state.caption_model = model
                 
                 # Load and configure VGG16
@@ -116,7 +125,7 @@ def generate_caption(image, max_length=34):
             # Encode current input text
             sequence = st.session_state.tokenizer.texts_to_sequences([in_text])[0]
             # Pad sequence
-            sequence = tf.keras.preprocessing.sequence.pad_sequences([sequence], maxlen=max_length)
+            sequence = keras.preprocessing.sequence.pad_sequences([sequence], maxlen=max_length)
             
             # Predict next word
             yhat = st.session_state.caption_model.predict([features, sequence], verbose=0)
@@ -173,4 +182,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-  
