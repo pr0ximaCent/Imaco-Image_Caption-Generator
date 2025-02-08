@@ -6,17 +6,48 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import gdown
+import os
 
-# Load the VGG16 model for feature extraction
+# Function to download the model from Google Drive
+def download_model_from_drive(file_id, output_file):
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output_file, quiet=False)
+
+# Load VGG16 model for feature extraction
 vgg_model = VGG16(weights="imagenet")
 vgg_model = Model(inputs=vgg_model.inputs, outputs=vgg_model.layers[-2].output)
 
-# Load your trained LSTM-based image captioning model
-model = tf.keras.models.load_model('caption_model.h5')
+# Function to load models
+def load_models():
+    if not st.session_state.models_loaded:
+        with st.spinner('Loading models... (this will only happen once)'):
+            try:
+                # Check if model is already downloaded
+                if not os.path.exists('caption_model.h5'):
+                    # Download the model from Google Drive
+                    download_model_from_drive('1BuncgbkV33pGpciip3ljIc9f8nmClaEH', 'caption_model.h5')
 
-# Load the tokenizer
-with open('tokenizer.pkl', 'rb') as tokenizer_file:
-    tokenizer = pickle.load(tokenizer_file)
+                # Load the trained model
+                model = tf.keras.models.load_model('caption_model.h5')
+
+                # Load the tokenizer
+                with open('tokenizer.pkl', 'rb') as tokenizer_file:
+                    st.session_state.tokenizer = pickle.load(tokenizer_file)
+
+                st.session_state.caption_model = model
+                st.session_state.models_loaded = True
+
+                # Load VGG16 model for feature extraction
+                base_model = VGG16()
+                st.session_state.vgg_model = Model(inputs=base_model.inputs, outputs=base_model.layers[-2].output)
+
+                # Warm up the models with a dummy prediction
+                dummy_image = np.zeros((1, 224, 224, 3))
+                _ = st.session_state.vgg_model.predict(dummy_image, verbose=0)
+
+            except Exception as e:
+                raise Exception(f"Error loading models: {str(e)}")
 
 # Set custom web page title
 st.set_page_config(page_title="Image Caption Generator", page_icon="📷")
@@ -45,7 +76,7 @@ if uploaded_image is not None:
         image = preprocess_input(image)
 
         # Extract features using VGG16
-        image_features = vgg_model.predict(image, verbose=0)
+        image_features = st.session_state.vgg_model.predict(image, verbose=0)
 
         # Max caption length (same value used during model training)
         max_caption_length = 34
@@ -71,7 +102,7 @@ if uploaded_image is not None:
             return caption
 
         # Generate caption
-        generated_caption = predict_caption(model, image_features, tokenizer, max_caption_length)
+        generated_caption = predict_caption(st.session_state.caption_model, image_features, st.session_state.tokenizer, max_caption_length)
 
         # Remove startseq and endseq
         generated_caption = generated_caption.replace("startseq", "").replace("endseq", "")
