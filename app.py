@@ -4,21 +4,15 @@ from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
-                                   concatenate, Bidirectional, Dot, Activation, 
-                                   RepeatVector, Multiply, Lambda)
+                                   concatenate)
 import numpy as np
 import pickle
 from PIL import Image
 import time
 
-# Configure Tensorflow GPU memory growth
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
+# Force CPU usage if GPU issues arise
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 def create_caption_model(vocab_size, max_length):
     """Recreate the caption model architecture"""
@@ -60,10 +54,14 @@ def load_models():
                 max_length = 34  # Set this to the same value used during training
                 
                 # Create model with correct architecture
-                st.session_state.caption_model = create_caption_model(vocab_size, max_length)
+                model = create_caption_model(vocab_size, max_length)
+                
+                # Compile the model (important for loading weights)
+                model.compile(loss='categorical_crossentropy', optimizer='adam')
                 
                 # Load weights
-                st.session_state.caption_model.load_weights('caption_model.h5')
+                model.load_weights('caption_model.h5')
+                st.session_state.caption_model = model
                 
                 # Load and configure VGG16
                 base_model = VGG16()
@@ -90,6 +88,7 @@ def process_image(image):
     image = preprocess_input(image)
     return image
 
+@st.cache_data
 def extract_features(image_array):
     features = st.session_state.vgg_model.predict(image_array, verbose=0)
     return features
@@ -174,3 +173,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+  
