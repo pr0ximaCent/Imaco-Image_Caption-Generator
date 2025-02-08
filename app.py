@@ -25,8 +25,10 @@ def load_models():
             try:
                 # Check if model is already downloaded
                 if not os.path.exists('caption_model.h5'):
-                    # Download the model from Google Drive
                     download_model_from_drive('1BuncgbkV33pGpciip3ljIc9f8nmClaEH', 'caption_model.h5')
+                    st.success("Model downloaded successfully!")
+                else:
+                    st.success("Model is already available.")
 
                 # Load the trained model
                 model = tf.keras.models.load_model('caption_model.h5')
@@ -49,9 +51,6 @@ def load_models():
             except Exception as e:
                 raise Exception(f"Error loading models: {str(e)}")
 
-# Set custom web page title
-st.set_page_config(page_title="Image Caption Generator", page_icon="📷")
-
 # Streamlit app
 st.title("Image Caption Generator")
 st.markdown(
@@ -67,7 +66,6 @@ if uploaded_image is not None:
     st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
 
     st.subheader("Generated Caption")
-    # Display loading spinner while processing
     with st.spinner("Generating caption..."):
         # Load image
         image = load_img(uploaded_image, target_size=(224, 224))
@@ -80,12 +78,6 @@ if uploaded_image is not None:
 
         # Max caption length (same value used during model training)
         max_caption_length = 34
-
-        # Define function to get word from index
-        def get_word_from_index(index, tokenizer):
-            return next(
-                (word for word, idx in tokenizer.word_index.items() if idx == index), None
-            )
 
         # Generate caption using the model
         def predict_caption(model, image_features, tokenizer, max_caption_length):
