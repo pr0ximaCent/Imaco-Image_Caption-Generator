@@ -5,51 +5,53 @@ scipy==1.11.2
 h5py==3.9.0
 scikit-learn>=1.2.0
 
-# Image processing
+# Web framework and UI
+streamlit
+altair>=5.1.0
+watchdog>=3.0.0
+
+# File downloading and processing
+gdown>=4.7.1
 Pillow==9.5.0
 
-# Web framework
-streamlit==1.38.0
-protobuf==4.24.2
-altair==5.1.0
-watchdog==3.0.0
+# Data processing and visualization
+matplotlib>=3.7.2
+pandas>=2.0.3
+protobuf>=4.24.2
 
-# File downloading
-gdown==4.7.1
+# Let Streamlit manage these UI packages
+rich
+markdown-it-py
+Pygments
+mdurl
 
-# Visualization
-matplotlib==3.7.2
-pandas==2.0.3
+# NLP and Utils
+nltk>=3.8.1
+tqdm>=4.66.1
+six>=1.16.0
+packaging>=23.1
+typing_extensions>=4.5.0
 
-# UI components
-rich==13.9.4
-markdown-it-py==3.0.0
-Pygments==2.16.1
-mdurl==0.1.2
+# TensorFlow and related dependencies
+tensorboard>=2.15.2
+tensorflow-estimator>=2.15.0
+tensorflow-io-gcs-filesystem>=0.31.0
+opt-einsum>=3.3.0
+grpcio>=1.57.0
+absl-py>=1.4.0
+astunparse>=1.6.3
+flatbuffers>=23.5.26
+gast>=0.4.0
+google-pasta>=0.2.0
+wrapt>=1.14.1
 
-# Utils
-nltk==3.8.1
-tqdm==4.66.1
-six==1.16.0
-packaging==23.1
-typing_extensions==4.5.0
+# HTTP and authentication
+requests>=2.31.0
+urllib3<2.0.0
+certifi>=2023.7.22
+idna>=3.4
+charset-normalizer>=3.2.0
 
-# TensorFlow dependencies
-tensorboard==2.15.2
-tensorflow-estimator==2.15.0
-tensorflow-io-gcs-filesystem==0.31.0
-opt-einsum==3.3.0
-grpcio==1.57.0
-absl-py==1.4.0
-astunparse==1.6.3
-flatbuffers==23.5.26
-gast==0.4.0
-google-pasta==0.2.0
-wrapt==1.14.1
-
-# Authentication and requests
-requests==2.31.0
-urllib3==1.26.16
-certifi==2023.7.22
-idna==3.4
-charset-normalizer==3.2.0
+# Additional TensorFlow dependencies
+termcolor>=2.3.0
+Werkzeug>=2.3.7
