@@ -3,12 +3,13 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
                                    concatenate)
 import numpy as np
 import pickle
 from PIL import Image
+import io
 import time
 
 # Configure Tensorflow to use GPU memory growth
@@ -47,6 +48,11 @@ def create_caption_model(vocab_size, max_length):
 if 'models_loaded' not in st.session_state:
     st.session_state.models_loaded = False
 
+def save_uploadedfile(uploadedfile):
+    with open(uploadedfile.name, "wb") as f:
+        f.write(uploadedfile.getbuffer())
+    return uploadedfile.name
+
 def load_models():
     if not st.session_state.models_loaded:
         with st.spinner('Loading models... (this will only happen once)'):
@@ -62,9 +68,9 @@ def load_models():
                 # Create model with correct architecture
                 model = create_caption_model(vocab_size, max_length)
                 
-                # Use standard Adam optimizer
-                model.compile(loss='categorical_crossentropy', 
-                            optimizer='adam')  # Using string 'adam' instead of optimizer instance
+                # Compile the model
+                optimizer = keras.optimizers.legacy.Adam()
+                model.compile(loss='categorical_crossentropy', optimizer=optimizer)
                 
                 # Load weights
                 model.load_weights('caption_model.h5')
