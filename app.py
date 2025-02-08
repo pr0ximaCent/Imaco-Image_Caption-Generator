@@ -1,189 +1,85 @@
 import streamlit as st
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.preprocessing.image import img_to_array
-from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
-                                   concatenate)
 import numpy as np
 import pickle
-from PIL import Image
-import io
-import time
+import tensorflow as tf
+from tensorflow.keras.models import Model
+from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-# Configure Tensorflow to use GPU memory growth
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
+# Load the VGG16 model for feature extraction
+vgg_model = VGG16(weights="imagenet")
+vgg_model = Model(inputs=vgg_model.inputs, outputs=vgg_model.layers[-2].output)
 
-def create_caption_model(vocab_size, max_length):
-    """Recreate the caption model architecture"""
-    
-    # Features from the CNN
-    inputs1 = Input(shape=(4096,))
-    fe1 = Dropout(0.5)(inputs1)
-    fe2 = Dense(256, activation='relu')(fe1)
-    
-    # Sequence model
-    inputs2 = Input(shape=(max_length,))
-    se1 = Embedding(vocab_size, 256, mask_zero=True)(inputs2)
-    se2 = Dropout(0.5)(se1)
-    se3 = LSTM(256)(se2)
-    
-    # Decoder
-    decoder1 = concatenate([fe2, se3])
-    decoder2 = Dense(256, activation='relu')(decoder1)
-    outputs = Dense(vocab_size, activation='softmax')(decoder2)
-    
-    # Create the model
-    model = Model(inputs=[inputs1, inputs2], outputs=outputs)
-    return model
+# Load your trained LSTM-based image captioning model
+model = tf.keras.models.load_model('caption_model.h5')
 
-# Cache the models and tokenizer in session state
-if 'models_loaded' not in st.session_state:
-    st.session_state.models_loaded = False
+# Load the tokenizer
+with open('tokenizer.pkl', 'rb') as tokenizer_file:
+    tokenizer = pickle.load(tokenizer_file)
 
-def save_uploadedfile(uploadedfile):
-    with open(uploadedfile.name, "wb") as f:
-        f.write(uploadedfile.getbuffer())
-    return uploadedfile.name
+# Set custom web page title
+st.set_page_config(page_title="Image Caption Generator", page_icon="📷")
 
-def load_models():
-    if not st.session_state.models_loaded:
-        with st.spinner('Loading models... (this will only happen once)'):
-            try:
-                # Load tokenizer first to get vocab_size
-                with open('tokenizer.pkl', 'rb') as f:
-                    st.session_state.tokenizer = pickle.load(f)
-                
-                # Get vocabulary size
-                vocab_size = len(st.session_state.tokenizer.word_index) + 1
-                max_length = 34  # Set this to the same value used during training
-                
-                # Create model with correct architecture
-                model = create_caption_model(vocab_size, max_length)
-                
-                # Compile the model
-                optimizer = keras.optimizers.legacy.Adam()
-                model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-                
-                # Load weights
-                model.load_weights('caption_model.h5')
-                st.session_state.caption_model = model
-                
-                # Load and configure VGG16
-                base_model = VGG16()
-                st.session_state.vgg_model = Model(inputs=base_model.inputs, 
-                                                 outputs=base_model.layers[-2].output)
-                
-                st.session_state.models_loaded = True
-                
-                # Warmup the models with a dummy prediction
-                dummy_image = np.zeros((1, 224, 224, 3))
-                _ = st.session_state.vgg_model.predict(dummy_image, verbose=0)
-                
-            except Exception as e:
-                raise Exception(f"Error loading models: {str(e)}")
+# Streamlit app
+st.title("Image Caption Generator")
+st.markdown(
+    "Upload an image, and this app will generate a caption for it using a trained LSTM model."
+)
 
-@st.cache_data
-def extract_features(image_array):
-    """Cache feature extraction for identical images"""
-    features = st.session_state.vgg_model.predict(image_array, verbose=0)
-    return features
+# Upload image
+uploaded_image = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
 
-def process_image(image):
-    # Resize image to 224x224
-    image = image.resize((224, 224))
-    # Convert PIL image to numpy array
-    image = img_to_array(image)
-    # Reshape for VGG
-    image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
-    # Preprocess image for VGG
-    image = preprocess_input(image)
-    return image
+# Process uploaded image
+if uploaded_image is not None:
+    st.subheader("Uploaded Image")
+    st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
 
-def generate_caption(image, max_length=34):
-    # Process image
-    processed_image = process_image(image)
-    
-    # Extract features
-    with st.spinner('Extracting image features...'):
-        features = extract_features(processed_image)
-    
-    # Initialize caption generation
-    in_text = 'startseq'
-    
-    with st.spinner('Generating caption...'):
-        progress_bar = st.progress(0)
-        
-        # Generate caption word by word
-        for i in range(max_length):
-            # Update progress
-            progress = (i + 1) / max_length
-            progress_bar.progress(progress)
-            
-            # Encode current input text
-            sequence = st.session_state.tokenizer.texts_to_sequences([in_text])[0]
-            # Pad sequence
-            sequence = keras.preprocessing.sequence.pad_sequences([sequence], maxlen=max_length)
-            
-            # Predict next word
-            yhat = st.session_state.caption_model.predict([features, sequence], verbose=0)
-            # Get index with highest probability
-            yhat = np.argmax(yhat)
-            
-            # Convert index to word
-            word = None
-            for word, index in st.session_state.tokenizer.word_index.items():
-                if index == yhat:
+    st.subheader("Generated Caption")
+    # Display loading spinner while processing
+    with st.spinner("Generating caption..."):
+        # Load image
+        image = load_img(uploaded_image, target_size=(224, 224))
+        image = img_to_array(image)
+        image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
+        image = preprocess_input(image)
+
+        # Extract features using VGG16
+        image_features = vgg_model.predict(image, verbose=0)
+
+        # Max caption length (same value used during model training)
+        max_caption_length = 34
+
+        # Define function to get word from index
+        def get_word_from_index(index, tokenizer):
+            return next(
+                (word for word, idx in tokenizer.word_index.items() if idx == index), None
+            )
+
+        # Generate caption using the model
+        def predict_caption(model, image_features, tokenizer, max_caption_length):
+            caption = "startseq"
+            for _ in range(max_caption_length):
+                sequence = tokenizer.texts_to_sequences([caption])[0]
+                sequence = pad_sequences([sequence], maxlen=max_caption_length)
+                yhat = model.predict([image_features, sequence], verbose=0)
+                predicted_index = np.argmax(yhat)
+                predicted_word = get_word_from_index(predicted_index, tokenizer)
+                caption += " " + predicted_word
+                if predicted_word is None or predicted_word == "endseq":
                     break
-            
-            if word is None:
-                break
-                
-            in_text += ' ' + word
-            
-            if word == 'endseq':
-                break
-    
-    progress_bar.empty()
-    final_caption = in_text.replace('startseq', '').replace('endseq', '').strip()
-    return final_caption
+            return caption
 
-def main():
-    st.title('Image Caption Generator')
-    st.write('Upload an image and get its caption!')
-    
-    try:
-        load_models()
-        
-        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-        
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file)
-            st.image(image, caption='Uploaded Image', use_column_width=True)
-            
-            if st.button('Generate Caption'):
-                try:
-                    start_time = time.time()
-                    caption = generate_caption(image)
-                    processing_time = time.time() - start_time
-                    
-                    st.success(f'Caption generated in {processing_time:.2f} seconds!')
-                    st.write('**Generated Caption:**')
-                    st.write(caption)
-                    
-                except Exception as e:
-                    st.error(f"Error generating caption: {str(e)}")
-    
-    except Exception as e:
-        st.error(f"Error loading models: {str(e)}")
-        st.write("Please make sure all required model files are in the correct location.")
+        # Generate caption
+        generated_caption = predict_caption(model, image_features, tokenizer, max_caption_length)
 
-if __name__ == '__main__':
-    main()
+        # Remove startseq and endseq
+        generated_caption = generated_caption.replace("startseq", "").replace("endseq", "")
+
+    # Display the generated caption with custom styling
+    st.markdown(
+        f'<div style="border-left: 6px solid #ccc; padding: 5px 20px; margin-top: 20px;">'
+        f'<p style="font-style: italic;">“{generated_caption}”</p>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
