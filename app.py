@@ -44,8 +44,26 @@ def load_models():
                 else:
                     st.success("Model is already available.")
 
-                # Load the trained model
-                model = tf.keras.models.load_model('caption_model.h5')
+                # Load the trained model with custom objects to handle legacy format
+                custom_objects = {
+                    'InputLayer': lambda config: tf.keras.layers.InputLayer(
+                        input_shape=config['batch_shape'][1:] if 'batch_shape' in config else None,
+                        dtype=config.get('dtype', None),
+                        name=config.get('name', None)
+                    )
+                }
+
+                model = tf.keras.models.load_model(
+                    'caption_model.h5',
+                    custom_objects=custom_objects,
+                    compile=False  # Skip compilation initially
+                )
+
+                # Recompile the model
+                model.compile(
+                    optimizer='adam',
+                    loss='categorical_crossentropy'
+                )
 
                 # Load the tokenizer
                 with open('tokenizer.pkl', 'rb') as tokenizer_file:
@@ -64,6 +82,7 @@ def load_models():
 
             except Exception as e:
                 st.error(f"Error loading models: {str(e)}")
+                st.error(f"TensorFlow version: {tf.__version__}")
                 raise e
 
 # Function to predict caption
