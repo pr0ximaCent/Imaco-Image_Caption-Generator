@@ -1,3 +1,13 @@
+import sys
+# Monkey-patch to satisfy imports for keras.src.legacy
+try:
+    # Import the legacy optimizers module from TensorFlow's Keras
+    import tensorflow.keras.optimizers.legacy as legacy_optimizers
+    # Map the missing module name to the legacy optimizers module
+    sys.modules["keras.src.legacy"] = legacy_optimizers
+except ImportError:
+    pass
+
 import streamlit as st
 import tensorflow as tf
 from tensorflow import keras
@@ -5,14 +15,14 @@ from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
-                                   concatenate)
+                                       concatenate)
 import numpy as np
 import pickle
 from PIL import Image
 import io
 import time
 
-# Configure Tensorflow to use GPU memory growth
+# Configure TensorFlow to use GPU memory growth
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -67,7 +77,7 @@ def load_models():
                 
                 # Create model with correct architecture
                 model = create_caption_model(vocab_size, max_length)
-                # Compile the model using the standard optimizer
+                # Compile the model using the standard Adam optimizer
                 optimizer = keras.optimizers.Adam()
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
@@ -78,7 +88,7 @@ def load_models():
                 # Load and configure VGG16
                 base_model = VGG16()
                 st.session_state.vgg_model = Model(inputs=base_model.inputs, 
-                                                 outputs=base_model.layers[-2].output)
+                                                   outputs=base_model.layers[-2].output)
                 
                 st.session_state.models_loaded = True
                 
