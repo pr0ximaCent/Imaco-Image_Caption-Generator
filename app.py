@@ -1,19 +1,25 @@
 import streamlit as st
 import tensorflow as tf
-import keras
-from keras.preprocessing.image import img_to_array
-from keras.applications.vgg16 import VGG16, preprocess_input
-from keras.models import Model
-from keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
-                         concatenate)
+from tensorflow import keras
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.layers import (Input, Dense, LSTM, Embedding, Dropout, 
+                                   concatenate)
 import numpy as np
 import pickle
 from PIL import Image
+import io
 import time
 
-# Force CPU usage if GPU issues arise
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# Configure Tensorflow to use GPU memory growth
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 
 def create_caption_model(vocab_size, max_length):
     """Recreate the caption model architecture"""
@@ -38,9 +44,14 @@ def create_caption_model(vocab_size, max_length):
     model = Model(inputs=[inputs1, inputs2], outputs=outputs)
     return model
 
-# Cache models and tokenizer in session state
+# Cache the models and tokenizer in session state
 if 'models_loaded' not in st.session_state:
     st.session_state.models_loaded = False
+
+def save_uploadedfile(uploadedfile):
+    with open(uploadedfile.name, "wb") as f:
+        f.write(uploadedfile.getbuffer())
+    return uploadedfile.name
 
 def load_models():
     if not st.session_state.models_loaded:
@@ -57,19 +68,12 @@ def load_models():
                 # Create model with correct architecture
                 model = create_caption_model(vocab_size, max_length)
                 
-                # Compile the model (important for loading weights)
-                model.compile(loss='categorical_crossentropy', optimizer='adam')
+                # Compile the model
+                optimizer = keras.optimizers.legacy.Adam()
+                model.compile(loss='categorical_crossentropy', optimizer=optimizer)
                 
-                try:
-                    # Try loading weights directly
-                    model.load_weights('caption_model.h5')
-                except Exception as weight_error:
-                    # If direct loading fails, try loading as a saved model
-                    try:
-                        model = tf.keras.models.load_model('caption_model.h5')
-                    except Exception as model_error:
-                        raise Exception(f"Failed to load model: {str(model_error)}")
-                
+                # Load weights
+                model.load_weights('caption_model.h5')
                 st.session_state.caption_model = model
                 
                 # Load and configure VGG16
@@ -79,12 +83,18 @@ def load_models():
                 
                 st.session_state.models_loaded = True
                 
-                # Warmup models
+                # Warmup the models with a dummy prediction
                 dummy_image = np.zeros((1, 224, 224, 3))
                 _ = st.session_state.vgg_model.predict(dummy_image, verbose=0)
                 
             except Exception as e:
                 raise Exception(f"Error loading models: {str(e)}")
+
+@st.cache_data
+def extract_features(image_array):
+    """Cache feature extraction for identical images"""
+    features = st.session_state.vgg_model.predict(image_array, verbose=0)
+    return features
 
 def process_image(image):
     # Resize image to 224x224
@@ -96,11 +106,6 @@ def process_image(image):
     # Preprocess image for VGG
     image = preprocess_input(image)
     return image
-
-@st.cache_data
-def extract_features(image_array):
-    features = st.session_state.vgg_model.predict(image_array, verbose=0)
-    return features
 
 def generate_caption(image, max_length=34):
     # Process image
